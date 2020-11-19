@@ -12,5 +12,6 @@
 
 @property (nonatomic, copy) NSString *file;//文件
 @property (nonatomic, assign) NSUInteger size;//大小
+@property (nonatomic, copy) NSString *className;//类名
 
 @end

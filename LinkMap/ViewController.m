@@ -23,6 +23,10 @@
 @property (strong) NSURL *linkMapFileURL;
 @property (strong) NSString *linkMapContent;
 
+@property (strong) NSURL *comLinkMapFileURL;
+@property (strong) NSString *comLinkMapContent;
+@property (weak) IBOutlet NSTextField *compareFilePathField;
+
 @property (strong) NSMutableString *result;//分析的结果
 
 @end
@@ -43,8 +47,8 @@
     3.回到本应用，点击“选择文件”，打开Link Map文件  \n\
     4.点击“开始”，解析Link Map文件 \n\
     5.点击“输出文件”，得到解析后的Link Map文件 \n\
-    6. * 输入目标文件的关键字(例如：libIM)，然后点击“开始”。实现搜索功能 \n\
-    7. * 勾选“分组解析”，然后点击“开始”。实现对不同库的目标文件进行分组";
+    6. * 输入需忽略，然后点击“开始”。实现忽略功能 \n\
+    7. * 勾选“具体到函数（默认到类名）”，然后点击“开始”。实现对不同库的目标文件进行分组";
 }
 
 - (IBAction)chooseFile:(id)sender {
@@ -63,16 +67,37 @@
     }];
 }
 
+- (IBAction)chooseCompareFile:(id)sender {
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    panel.allowsMultipleSelection = NO;
+    panel.canChooseDirectories = NO;
+    panel.resolvesAliases = NO;
+    panel.canChooseFiles = YES;
+    
+    [panel beginWithCompletionHandler:^(NSInteger result){
+        if (result == NSFileHandlingPanelOKButton) {
+            NSURL *document = [[panel URLs] objectAtIndex:0];
+            _compareFilePathField.stringValue = document.path;
+            self.comLinkMapFileURL = document;
+        }
+    }];
+}
+
 - (IBAction)analyze:(id)sender {
     if (!_linkMapFileURL || ![[NSFileManager defaultManager] fileExistsAtPath:[_linkMapFileURL path] isDirectory:nil]) {
         [self showAlertWithText:@"请选择正确的Link Map文件路径"];
         return;
     }
     
+    if (!_comLinkMapFileURL || ![[NSFileManager defaultManager] fileExistsAtPath:[_comLinkMapFileURL path] isDirectory:nil]) {
+        [self showAlertWithText:@"请选择正确对比的Link Map文件路径"];
+        return;
+    }
+    
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSString *content = [NSString stringWithContentsOfURL:_linkMapFileURL encoding:NSMacOSRomanStringEncoding error:nil];
-        
-        if (![self checkContent:content]) {
+        NSString *compareContent = [NSString stringWithContentsOfURL:_comLinkMapFileURL encoding:NSMacOSRomanStringEncoding error:nil];
+        if (![self checkContent:content] || ![self checkContent:compareContent]) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self showAlertWithText:@"Link Map文件格式有误"];
             });
@@ -85,23 +110,15 @@
             
         });
         
-        NSDictionary *symbolMap = [self symbolMapFromContent:content];
+        NSArray *symbolArray = [self symbolMapFromContent:content];
+        NSMutableSet *set1 = [NSMutableSet setWithArray:symbolArray];
         
-        NSArray <SymbolModel *>*symbols = [symbolMap allValues];
+        NSArray *symbolArray2 = [self symbolMapFromContent:compareContent];
+        NSMutableSet *set2 = [NSMutableSet setWithArray:symbolArray2];
         
-        NSArray *sortedSymbols = [self sortSymbols:symbols];
-        
-        __block NSControlStateValue groupButtonState;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            groupButtonState = _groupButton.state;
-        });
-        
-        if (1 == groupButtonState) {
-            [self buildCombinationResultWithSymbols:sortedSymbols];
-        } else {
-            [self buildResultWithSymbols:sortedSymbols];
-        }
-        
+        [set1 intersectSet:set2];
+                
+        [self buildResultWithSymbols:set1.allObjects];
         dispatch_async(dispatch_get_main_queue(), ^{
             self.contentTextView.string = _result;
             self.indicator.hidden = YES;
@@ -111,8 +128,8 @@
     });
 }
 
-- (NSMutableDictionary *)symbolMapFromContent:(NSString *)content {
-    NSMutableDictionary <NSString *,SymbolModel *>*symbolMap = [NSMutableDictionary new];
+- (NSArray *)symbolMapFromContent:(NSString *)content {
+    NSMutableArray *symbolArray = [NSMutableArray array];
     // 符号文件列表
     NSArray *lines = [content componentsSeparatedByString:@"\n"];
     
@@ -129,121 +146,39 @@
             else if ([line hasPrefix:@"# Symbols:"])
                 reachSymbols = YES;
         } else {
-            if(reachFiles == YES && reachSections == NO && reachSymbols == NO) {
+            if(reachFiles == YES && reachSections == YES && reachSymbols == YES) {
+                __block NSControlStateValue groupButtonState;
+                dispatch_sync(dispatch_get_main_queue(), ^{
+                    groupButtonState = _groupButton.state;
+                });
                 NSRange range = [line rangeOfString:@"]"];
                 if(range.location != NSNotFound) {
-                    SymbolModel *symbol = [SymbolModel new];
-                    symbol.file = [line substringFromIndex:range.location+1];
-                    NSString *key = [line substringToIndex:range.location+1];
-                    symbolMap[key] = symbol;
-                }
-            } else if (reachFiles == YES && reachSections == YES && reachSymbols == YES) {
-                NSArray <NSString *>*symbolsArray = [line componentsSeparatedByString:@"\t"];
-                if(symbolsArray.count == 3) {
-                    NSString *fileKeyAndName = symbolsArray[2];
-                    NSUInteger size = strtoul([symbolsArray[1] UTF8String], nil, 16);
-                    
-                    NSRange range = [fileKeyAndName rangeOfString:@"]"];
-                    if(range.location != NSNotFound) {
-                        NSString *key = [fileKeyAndName substringToIndex:range.location+1];
-                        SymbolModel *symbol = symbolMap[key];
-                        if(symbol) {
-                            symbol.size += size;
+                    NSString *classFuncName = [line substringFromIndex:range.location+2];
+                    if (groupButtonState == NSControlStateValueOn) {
+                        // 具体到函数
+                        if (([classFuncName hasPrefix:@"-["]) || ([classFuncName hasPrefix:@"+["])) {
+                            [symbolArray addObject:classFuncName];
+                        }
+                    } else {
+                        // 只到类名
+                        if ([classFuncName containsString:@"_OBJC_CLASS_$_"]) {
+                            NSString *className = [classFuncName stringByReplacingOccurrencesOfString:@"_OBJC_CLASS_$_" withString:@""];
+                            [symbolArray addObject:className];
                         }
                     }
                 }
             }
         }
     }
-    return symbolMap;
-}
-
-- (NSArray *)sortSymbols:(NSArray *)symbols {
-    NSArray *sortedSymbols = [symbols sortedArrayUsingComparator:^NSComparisonResult(SymbolModel *  _Nonnull obj1, SymbolModel *  _Nonnull obj2) {
-        if(obj1.size > obj2.size) {
-            return NSOrderedAscending;
-        } else if (obj1.size < obj2.size) {
-            return NSOrderedDescending;
-        } else {
-            return NSOrderedSame;
-        }
-    }];
-    
-    return sortedSymbols;
+    return symbolArray.copy;
 }
 
 - (void)buildResultWithSymbols:(NSArray *)symbols {
-    self.result = [@"文件大小\t文件名称\r\n\r\n" mutableCopy];
-    NSUInteger totalSize = 0;
+    self.result = [@"相同的文件名称\r\n\r\n" mutableCopy];
     
-    __block NSString *searchKey;
-    dispatch_sync(dispatch_get_main_queue(), ^{
-        searchKey = _searchField.stringValue;
-    });
-
-    
-    for(SymbolModel *symbol in symbols) {
-        if (searchKey.length > 0) {
-            if ([symbol.file containsString:searchKey]) {
-                [self appendResultWithSymbol:symbol];
-                totalSize += symbol.size;
-            }
-        } else {
-            [self appendResultWithSymbol:symbol];
-            totalSize += symbol.size;
-        }
+    for(NSString *symbol in symbols) {
+        [_result appendFormat:@"%@\t\r\n",symbol];
     }
-    
-    [_result appendFormat:@"\r\n总大小: %.2fM\r\n",(totalSize/1024.0/1024.0)];
-}
-
-
-- (void)buildCombinationResultWithSymbols:(NSArray *)symbols {
-    self.result = [@"库大小\t库名称\r\n\r\n" mutableCopy];
-    NSUInteger totalSize = 0;
-    
-    NSMutableDictionary *combinationMap = [[NSMutableDictionary alloc] init];
-    
-    for(SymbolModel *symbol in symbols) {
-        NSString *name = [[symbol.file componentsSeparatedByString:@"/"] lastObject];
-        if ([name hasSuffix:@")"] &&
-            [name containsString:@"("]) {
-            NSRange range = [name rangeOfString:@"("];
-            NSString *component = [name substringToIndex:range.location];
-            
-            SymbolModel *combinationSymbol = [combinationMap objectForKey:component];
-            if (!combinationSymbol) {
-                combinationSymbol = [[SymbolModel alloc] init];
-                [combinationMap setObject:combinationSymbol forKey:component];
-            }
-            
-            combinationSymbol.size += symbol.size;
-            combinationSymbol.file = component;
-        } else {
-            // symbol可能来自app本身的目标文件或者系统的动态库，在最后的结果中一起显示
-            [combinationMap setObject:symbol forKey:symbol.file];
-        }
-    }
-    
-    NSArray <SymbolModel *>*combinationSymbols = [combinationMap allValues];
-    
-    NSArray *sortedSymbols = [self sortSymbols:combinationSymbols];
-    
-    NSString *searchKey = _searchField.stringValue;
-    
-    for(SymbolModel *symbol in sortedSymbols) {
-        if (searchKey.length > 0) {
-            if ([symbol.file containsString:searchKey]) {
-                [self appendResultWithSymbol:symbol];
-                totalSize += symbol.size;
-            }
-        } else {
-            [self appendResultWithSymbol:symbol];
-            totalSize += symbol.size;
-        }
-    }
-    
-    [_result appendFormat:@"\r\n总大小: %.2fM\r\n",(totalSize/1024.0/1024.0)];
 }
 
 - (IBAction)ouputFile:(id)sender {
@@ -258,20 +193,10 @@
             NSURL*  theDoc = [[panel URLs] objectAtIndex:0];
             NSMutableString *content =[[NSMutableString alloc]initWithCapacity:0];
             [content appendString:[theDoc path]];
-            [content appendString:@"/linkMap.txt"];
+            [content appendString:@"/linkMapCompareResult.txt"];
             [_result writeToFile:content atomically:YES encoding:NSUTF8StringEncoding error:nil];
         }
     }];
-}
-
-- (void)appendResultWithSymbol:(SymbolModel *)model {
-    NSString *size = nil;
-    if (model.size / 1024.0 / 1024.0 > 1) {
-        size = [NSString stringWithFormat:@"%.2fM", model.size / 1024.0 / 1024.0];
-    } else {
-        size = [NSString stringWithFormat:@"%.2fK", model.size / 1024.0];
-    }
-    [_result appendFormat:@"%@\t%@\r\n",size, [[model.file componentsSeparatedByString:@"/"] lastObject]];
 }
 
 - (BOOL)checkContent:(NSString *)content {
