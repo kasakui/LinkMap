@@ -697,7 +697,7 @@
                                 </textFieldCell>
                             </textField>
                             <progressIndicator wantsLayer="YES" horizontalHuggingPriority="750" verticalHuggingPriority="750" maxValue="100" bezeled="NO" indeterminate="YES" controlSize="small" style="spinning" translatesAutoresizingMaskIntoConstraints="NO" id="VoU-Xv-rpc">
-                                <rect key="frame" x="383" y="636" width="16" height="16"/>
+                                <rect key="frame" x="396" y="636" width="16" height="16"/>
                             </progressIndicator>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Pqd-pM-Qse">
                                 <rect key="frame" x="572" y="629" width="88" height="32"/>
@@ -736,7 +736,7 @@
                                 </scroller>
                             </scrollView>
                             <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="xh9-IL-MDL">
-                                <rect key="frame" x="20" y="638" width="350" height="21"/>
+                                <rect key="frame" x="20" y="638" width="363" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" placeholderString="忽略关键字" drawsBackground="YES" id="rPO-Si-6g9">
                                     <font key="font" metaFont="system"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -744,7 +744,7 @@
                                 </textFieldCell>
                             </textField>
                             <button translatesAutoresizingMaskIntoConstraints="NO" id="jz7-uS-xpD">
-                                <rect key="frame" x="405" y="636" width="93" height="18"/>
+                                <rect key="frame" x="418" y="636" width="93" height="18"/>
                                 <buttonCell key="cell" type="check" title="具体到函数" bezelStyle="regularSquare" imagePosition="left" inset="2" id="FBA-2K-XY9">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -769,10 +769,10 @@
                                 </connections>
                             </button>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="I8M-DG-WSk">
-                                <rect key="frame" x="499" y="628" width="61" height="32"/>
-                                <buttonCell key="cell" type="push" title="开始" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="XP2-Lh-FvY">
+                                <rect key="frame" x="512" y="628" width="48" height="32"/>
+                                <buttonCell key="cell" type="push" title="冲" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="XP2-Lh-FvY">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
-                                    <font key="font" metaFont="system"/>
+                                    <font key="font" size="13" name=".PingFangSC-Regular"/>
                                 </buttonCell>
                                 <connections>
                                     <action selector="analyze:" target="NOm-F0-hfk" id="0xl-Fv-JBG"/>

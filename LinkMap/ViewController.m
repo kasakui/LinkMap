@@ -27,6 +27,11 @@
 @property (strong) NSString *comLinkMapContent;
 @property (weak) IBOutlet NSTextField *compareFilePathField;
 
+
+
+@property (strong) NSSet *staticSet1;
+@property (strong) NSSet *staticSet2;
+
 @property (strong) NSMutableString *result;//分析的结果
 
 @end
@@ -47,7 +52,7 @@
     3.回到本应用，点击“选择文件”，打开Link Map文件  \n\
     4.点击“开始”，解析Link Map文件 \n\
     5.点击“输出文件”，得到解析后的Link Map文件 \n\
-    6. * 输入需忽略，然后点击“开始”。实现忽略功能 \n\
+    6. * 输入需忽略，然后点击“开始”。实现忽略功能（尚未实现） \n\
     7. * 勾选“具体到函数（默认到类名）”，然后点击“开始”。实现对不同库的目标文件进行分组";
 }
 
@@ -110,15 +115,22 @@
             
         });
         
-        NSArray *symbolArray = [self symbolMapFromContent:content];
-        NSMutableSet *set1 = [NSMutableSet setWithArray:symbolArray];
+        NSArray *symbolArray1 = [self symbolMapFromContent:content];
+        // 取第一个object为相同类，第二个为相同常量名
+        NSMutableSet *sameSymbolSet1 = [NSMutableSet setWithArray:symbolArray1.firstObject];
         
         NSArray *symbolArray2 = [self symbolMapFromContent:compareContent];
-        NSMutableSet *set2 = [NSMutableSet setWithArray:symbolArray2];
+        NSMutableSet *sameSymbolSet2 = [NSMutableSet setWithArray:symbolArray2.firstObject];
+        [sameSymbolSet1 intersectSet:sameSymbolSet2];
         
-        [set1 intersectSet:set2];
+        NSMutableSet *sameStaticSet1 = [NSMutableSet setWithSet:symbolArray1[1]];
+        NSMutableSet *sameStaticSet2 = [NSMutableSet setWithSet:symbolArray2[1]];
+
+        [sameStaticSet1 intersectSet:sameStaticSet2];
                 
-        [self buildResultWithSymbols:set1.allObjects];
+        [self buildResultWithSymbols:sameSymbolSet1.allObjects];
+        [self appendResultWithStaticNames:sameStaticSet1.allObjects];
+        
         dispatch_async(dispatch_get_main_queue(), ^{
             self.contentTextView.string = _result;
             self.indicator.hidden = YES;
@@ -129,13 +141,18 @@
 }
 
 - (NSArray *)symbolMapFromContent:(NSString *)content {
+    // 存放相同类名数组
     NSMutableArray *symbolArray = [NSMutableArray array];
+    // 存放相同全局常量数组
+    NSMutableArray *staticArray = [NSMutableArray array];
+    
     // 符号文件列表
     NSArray *lines = [content componentsSeparatedByString:@"\n"];
     
     BOOL reachFiles = NO;
     BOOL reachSymbols = NO;
     BOOL reachSections = NO;
+    BOOL reachDeadSymbols = NO;
     
     for(NSString *line in lines) {
         if([line hasPrefix:@"#"]) {
@@ -145,8 +162,10 @@
                 reachSections = YES;
             else if ([line hasPrefix:@"# Symbols:"])
                 reachSymbols = YES;
+            else if ([line hasPrefix:@"# Dead Stripped Symbols:"])
+                reachDeadSymbols = YES;
         } else {
-            if(reachFiles == YES && reachSections == YES && reachSymbols == YES) {
+            if(reachFiles == YES && reachSections == YES && reachSymbols == YES && reachDeadSymbols == NO) {
                 __block NSControlStateValue groupButtonState;
                 dispatch_sync(dispatch_get_main_queue(), ^{
                     groupButtonState = _groupButton.state;
@@ -168,16 +187,42 @@
                     }
                 }
             }
+            else if (reachDeadSymbols) {
+                NSRange range = [line rangeOfString:@"]"];
+                if (range.location != NSNotFound) {
+                    NSString *symbolStr = [line substringFromIndex:range.location+2];
+                    if ([symbolStr hasPrefix:@"_"]) {
+                        NSInteger strCount = [symbolStr length] - [[symbolStr stringByReplacingOccurrencesOfString:@"_" withString:@""] length];
+                        NSInteger times = strCount / [@"_" length];
+                        if (times==1) {
+                            symbolStr = [symbolStr stringByReplacingOccurrencesOfString:@"_" withString:@""];
+                            if (![symbolStr containsString:@"."]) {
+                                [staticArray addObject:symbolStr];
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
-    return symbolArray.copy;
+    // 去重
+    NSSet *staticSet = [NSSet setWithArray:staticArray];
+    return @[symbolArray,staticSet];
 }
 
 - (void)buildResultWithSymbols:(NSArray *)symbols {
-    self.result = [@"相同的文件名称\r\n\r\n" mutableCopy];
-    
+    self.result = [@"相同的符号名称\r\n\r\n" mutableCopy];
+    [_result appendFormat:@"共%lu个相同符号\n",(unsigned long)symbols.count];
     for(NSString *symbol in symbols) {
         [_result appendFormat:@"%@\t\r\n",symbol];
+    }
+}
+
+- (void)appendResultWithStaticNames:(NSArray *)staticNames {
+    [self.result appendFormat:@"--------------------------------------------------------------------\n相同常量名\n"];
+    [_result appendFormat:@"共%lu个相同常量\n",(unsigned long)staticNames.count];
+    for (NSString *staticName in staticNames) {
+        [_result appendFormat:@"%@\t\r\n",staticName];
     }
 }
 
