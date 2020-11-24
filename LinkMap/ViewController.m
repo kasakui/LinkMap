@@ -27,11 +27,6 @@
 @property (strong) NSString *comLinkMapContent;
 @property (weak) IBOutlet NSTextField *compareFilePathField;
 
-
-
-@property (strong) NSSet *staticSet1;
-@property (strong) NSSet *staticSet2;
-
 @property (strong) NSMutableString *result;//分析的结果
 
 @end
@@ -116,7 +111,7 @@
         });
         
         NSArray *symbolArray1 = [self symbolMapFromContent:content];
-        // 取第一个object为相同类，第二个为相同常量名
+        // 取第一个object为相同类，第二个为相同常量名,第三个为相同category函数名
         NSMutableSet *sameSymbolSet1 = [NSMutableSet setWithArray:symbolArray1.firstObject];
         
         NSArray *symbolArray2 = [self symbolMapFromContent:compareContent];
@@ -125,11 +120,16 @@
         
         NSMutableSet *sameStaticSet1 = [NSMutableSet setWithSet:symbolArray1[1]];
         NSMutableSet *sameStaticSet2 = [NSMutableSet setWithSet:symbolArray2[1]];
-
         [sameStaticSet1 intersectSet:sameStaticSet2];
-                
+        
+        NSMutableSet *sameCategorySet1 = [NSMutableSet setWithArray:symbolArray1[2]];
+        NSMutableSet *sameCategorySet2 = [NSMutableSet setWithArray:symbolArray2[2]];
+        [sameCategorySet1 intersectSet:sameCategorySet2];
+        NSLog(@"%@",sameCategorySet1);
+
         [self buildResultWithSymbols:sameSymbolSet1.allObjects];
         [self appendResultWithStaticNames:sameStaticSet1.allObjects];
+        [self appendResultWithCategoryNames:sameCategorySet1.allObjects];
         
         dispatch_async(dispatch_get_main_queue(), ^{
             self.contentTextView.string = _result;
@@ -145,7 +145,10 @@
     NSMutableArray *symbolArray = [NSMutableArray array];
     // 存放相同全局常量数组
     NSMutableArray *staticArray = [NSMutableArray array];
+    // 存放category函数名数组
+    NSMutableArray *categoryArray = [NSMutableArray array];
     
+    NSMutableDictionary <NSString *,SymbolModel *>*symbolMap = [NSMutableDictionary new];
     // 符号文件列表
     NSArray *lines = [content componentsSeparatedByString:@"\n"];
     
@@ -165,24 +168,56 @@
             else if ([line hasPrefix:@"# Dead Stripped Symbols:"])
                 reachDeadSymbols = YES;
         } else {
-            if(reachFiles == YES && reachSections == YES && reachSymbols == YES && reachDeadSymbols == NO) {
+            if(reachFiles == YES && reachSections == NO && reachSymbols == NO) {
+                NSRange range = [line rangeOfString:@"]"];
+                if(range.location != NSNotFound) {
+                    SymbolModel *symbol = [SymbolModel new];
+                    NSString *file = [line substringFromIndex:range.location+1];
+                    NSString *libName = [[file componentsSeparatedByString:@"/"] lastObject];
+                    NSString *key = [line substringToIndex:range.location+1];
+                    symbol.libName = libName;
+                    symbolMap[key] = symbol;
+                }
+            }
+            else if(reachFiles == YES && reachSections == YES && reachSymbols == YES && reachDeadSymbols == NO) {
                 __block NSControlStateValue groupButtonState;
                 dispatch_sync(dispatch_get_main_queue(), ^{
                     groupButtonState = _groupButton.state;
                 });
                 NSRange range = [line rangeOfString:@"]"];
                 if(range.location != NSNotFound) {
+                    NSString *key = [line substringToIndex:range.location+1];
                     NSString *classFuncName = [line substringFromIndex:range.location+2];
                     if (groupButtonState == NSControlStateValueOn) {
                         // 具体到函数
                         if (([classFuncName hasPrefix:@"-["]) || ([classFuncName hasPrefix:@"+["])) {
+                            SymbolModel *symbol = symbolMap[key];
+                            symbol.className = classFuncName;
+                            symbolMap[key] = symbol;
                             [symbolArray addObject:classFuncName];
                         }
                     } else {
                         // 只到类名
+                        NSArray <NSString *>*symbolsArray = [line componentsSeparatedByString:@"\t"];
+                        NSString *key = @"";
+                        if(symbolsArray.count == 3) {
+                            NSString *fileKeyAndName = symbolsArray[2];
+                            NSRange range = [fileKeyAndName rangeOfString:@"]"];
+                            if(range.location != NSNotFound) {
+                                key = [fileKeyAndName substringToIndex:range.location+1];
+                            }
+                        }
                         if ([classFuncName containsString:@"_OBJC_CLASS_$_"]) {
                             NSString *className = [classFuncName stringByReplacingOccurrencesOfString:@"_OBJC_CLASS_$_" withString:@""];
-                            [symbolArray addObject:className];
+                            SymbolModel *symbol = symbolMap[key];
+                            if (symbol) {
+                                NSString *str = [NSString stringWithFormat:@"%@-%@",symbol.libName,className];
+                                [symbolArray addObject:str];
+                            }
+                        }
+                        if ([classFuncName containsString:@"__OBJC_$_CLASS_METHODS_"] && [classFuncName containsString:@"("] && [classFuncName containsString:@")"]) {
+                            NSString *categoryFuncName = [classFuncName stringByReplacingOccurrencesOfString:@"__OBJC_$_CLASS_METHODS_" withString:@""];
+                            [categoryArray addObject:categoryFuncName];
                         }
                     }
                 }
@@ -207,11 +242,11 @@
     }
     // 去重
     NSSet *staticSet = [NSSet setWithArray:staticArray];
-    return @[symbolArray,staticSet];
+    return @[symbolArray,staticSet,categoryArray];
 }
 
 - (void)buildResultWithSymbols:(NSArray *)symbols {
-    self.result = [@"相同的符号名称\r\n\r\n" mutableCopy];
+    self.result = [@"相同的符号名称\r\n库名称\t\t\t类名\r\n\r\n" mutableCopy];
     [_result appendFormat:@"共%lu个相同符号\n",(unsigned long)symbols.count];
     for(NSString *symbol in symbols) {
         [_result appendFormat:@"%@\t\r\n",symbol];
@@ -219,12 +254,21 @@
 }
 
 - (void)appendResultWithStaticNames:(NSArray *)staticNames {
-    [self.result appendFormat:@"--------------------------------------------------------------------\n相同常量名\n"];
+    [self.result appendFormat:@"------------------------------------------------------------------------------\n相同常量名\n"];
     [_result appendFormat:@"共%lu个相同常量\n",(unsigned long)staticNames.count];
     for (NSString *staticName in staticNames) {
         [_result appendFormat:@"%@\t\r\n",staticName];
     }
 }
+
+- (void)appendResultWithCategoryNames:(NSArray *)categoryNames {
+    [self.result appendFormat:@"------------------------------------------------------------------------------\n相同category函数名\n"];
+    [_result appendFormat:@"共%lu个相同category函数\n",(unsigned long)categoryNames.count];
+    for (NSString *categoryName in categoryNames) {
+        [_result appendFormat:@"%@\t\r\n",categoryName];
+    }
+}
+
 
 - (IBAction)ouputFile:(id)sender {
     NSOpenPanel* panel = [NSOpenPanel openPanel];

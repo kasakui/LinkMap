@@ -16,7 +16,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		6E7367E51CB7843200722B99 /* LinkMap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LinkMap.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E7367E51CB7843200722B99 /* LinkMapCompareCompare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LinkMapCompareCompare.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6E7367E81CB7843200722B99 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		6E7367E91CB7843200722B99 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		6E7367EC1CB7843200722B99 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -51,7 +51,7 @@
 		6E7367E61CB7843200722B99 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				6E7367E51CB7843200722B99 /* LinkMap.app */,
+				6E7367E51CB7843200722B99 /* LinkMapCompareCompare.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -84,9 +84,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		6E7367E41CB7843200722B99 /* LinkMap */ = {
+		6E7367E41CB7843200722B99 /* LinkMapCompareCompare */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 6E7368041CB7843200722B99 /* Build configuration list for PBXNativeTarget "LinkMap" */;
+			buildConfigurationList = 6E7368041CB7843200722B99 /* Build configuration list for PBXNativeTarget "LinkMapCompareCompare" */;
 			buildPhases = (
 				6E7367E11CB7843200722B99 /* Sources */,
 				6E7367E21CB7843200722B99 /* Frameworks */,
@@ -96,9 +96,9 @@
 			);
 			dependencies = (
 			);
-			name = LinkMap;
+			name = LinkMapCompareCompare;
 			productName = LinkMap;
-			productReference = 6E7367E51CB7843200722B99 /* LinkMap.app */;
+			productReference = 6E7367E51CB7843200722B99 /* LinkMapCompareCompare.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -112,14 +112,16 @@
 				TargetAttributes = {
 					6E7367E41CB7843200722B99 = {
 						CreatedOnToolsVersion = 7.2.1;
+						DevelopmentTeam = GK8PJ5MTML;
 					};
 				};
 			};
-			buildConfigurationList = 6E7367E01CB7843200722B99 /* Build configuration list for PBXProject "LinkMap" */;
+			buildConfigurationList = 6E7367E01CB7843200722B99 /* Build configuration list for PBXProject "LinkMapCompare" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -128,7 +130,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				6E7367E41CB7843200722B99 /* LinkMap */,
+				6E7367E41CB7843200722B99 /* LinkMapCompareCompare */,
 			);
 		};
 /* End PBXProject section */
@@ -255,10 +257,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = GK8PJ5MTML;
 				INFOPLIST_FILE = LinkMap/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nd.LinkMap;
+				PRODUCT_BUNDLE_IDENTIFIER = com.YY.LinkMapCompare;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -268,10 +271,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = GK8PJ5MTML;
 				INFOPLIST_FILE = LinkMap/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nd.LinkMap;
+				PRODUCT_BUNDLE_IDENTIFIER = com.YY.LinkMapCompare;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -279,7 +283,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		6E7367E01CB7843200722B99 /* Build configuration list for PBXProject "LinkMap" */ = {
+		6E7367E01CB7843200722B99 /* Build configuration list for PBXProject "LinkMapCompare" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				6E7368021CB7843200722B99 /* Debug */,
@@ -288,7 +292,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		6E7368041CB7843200722B99 /* Build configuration list for PBXNativeTarget "LinkMap" */ = {
+		6E7368041CB7843200722B99 /* Build configuration list for PBXNativeTarget "LinkMapCompareCompare" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				6E7368051CB7843200722B99 /* Debug */,

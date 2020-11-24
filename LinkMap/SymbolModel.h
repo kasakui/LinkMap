@@ -9,9 +9,9 @@
 #import <Foundation/Foundation.h>
 
 @interface SymbolModel : NSObject
-
-@property (nonatomic, copy) NSString *file;//文件
-@property (nonatomic, assign) NSUInteger size;//大小
-@property (nonatomic, copy) NSString *className;//类名
+/// 二进制库名
+@property (nonatomic, copy) NSString *libName;
+/// 类名
+@property (nonatomic, copy) NSString *className;
 
 @end

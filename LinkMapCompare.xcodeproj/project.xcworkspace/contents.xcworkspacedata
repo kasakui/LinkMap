@@ -2,6 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:LinkMap.xcodeproj">
+      location = "self:/Users/kasakui/Documents/GitHub/LinkMap/LinkMapCompare.xcodeproj">
    </FileRef>
 </Workspace>
