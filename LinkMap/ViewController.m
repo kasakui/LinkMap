@@ -185,7 +185,7 @@
                     groupButtonState = _groupButton.state;
                 });
                 NSRange range = [line rangeOfString:@"]"];
-                if(range.location != NSNotFound) {
+                if(range.location != NSNotFound && ![line containsString:@"literal string"] && [line hasPrefix:@"0x"]) {
                     NSString *key = [line substringToIndex:range.location+1];
                     NSString *classFuncName = [line substringFromIndex:range.location+2];
                     if (groupButtonState == NSControlStateValueOn) {
@@ -215,9 +215,8 @@
                                 [symbolArray addObject:str];
                             }
                         }
-                        if ([classFuncName containsString:@"__OBJC_$_CLASS_METHODS_"] && [classFuncName containsString:@"("] && [classFuncName containsString:@")"]) {
-                            NSString *categoryFuncName = [classFuncName stringByReplacingOccurrencesOfString:@"__OBJC_$_CLASS_METHODS_" withString:@""];
-                            [categoryArray addObject:categoryFuncName];
+                        else if ([classFuncName hasPrefix:@"-["] && [classFuncName containsString:@"("] && [classFuncName containsString:@")"]) {
+                            [categoryArray addObject:classFuncName];
                         }
                     }
                 }
